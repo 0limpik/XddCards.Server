@@ -1,0 +1,3 @@
+[submodule "XddCards.Protos"]
+	path = XddCards.Protos
+	url = https://github.com/0limpik/XddCards.Protos
