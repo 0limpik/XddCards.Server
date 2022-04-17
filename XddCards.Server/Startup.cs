@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using System;
+using System.Threading.Tasks;
+using Grpc.Core;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -58,8 +61,16 @@ namespace XddCards.Server
 
             app.UseRouting();
 
+            app.UseGrpcWeb(new GrpcWebOptions { DefaultEnabled = true });
+
+
             app.UseAuthentication();
             app.UseAuthorization();
+
+            if (env.IsDevelopment())
+            {
+                app.UseMiddleware<PingSimulatorMiddleware>();
+            }
 
             app.UseEndpoints(endpoints =>
             {
@@ -69,13 +80,24 @@ namespace XddCards.Server
                 endpoints.MapGrpcService<GamesService>();
                 endpoints.MapGrpcService<GameService>();
                 endpoints.MapGrpcService<PlayerService>();
-                endpoints.MapGrpcService<PlayerService>();
-
-                endpoints.MapGet("/", async context =>
-                {
-                    await context.Response.WriteAsync("Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
-                });
             });
+        }
+    }
+
+    public class PingSimulatorMiddleware
+    {
+        private readonly Random random = new();
+
+        private readonly RequestDelegate _next;
+
+        public PingSimulatorMiddleware(RequestDelegate next)
+            => _next = next;
+
+        public async Task InvokeAsync(HttpContext context)
+        {
+            await Task.Delay(random.Next(500, 1000));
+
+            await _next(context);
         }
     }
 }

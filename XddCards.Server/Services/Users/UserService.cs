@@ -1,11 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Grpc.Core;
-using XddCards.Server.Users;
+using XddCards.Grpc.Users;
 
 namespace XddCards.Server.Services.Users
 {
-    public class UserService : UserServiceGrpc.UserServiceGrpcBase
+    public class UserService : UserGrpc.UserGrpcBase
     {
         private class User
         {

@@ -1,38 +1,26 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Xdd.Model.Games.BlackJack;
-using static XddCards.Server.Services.Games.BlackJack.GameService;
+using XddCards.Server.Model;
+using XddCards.Server.Model.Games.BlackJack;
 
 namespace XddCards.Server.Repositories.Games.BlackJack
 {
     public class GamesRepository
     {
-        private static List<GameData> games = new();
+        private static List<GameModel> games = new();
 
-        public static GameData Get(int id)
-            => games.Single(x => x.id == id);
+        public static GameModel Get(User user)
+            => games.Single(x => x.creator == user);
 
-        public static int Create(int creatorId)
+        public static GameModel Create(User creator)
         {
-            var id = games.Count + 1;
-
-            var data = new GameData
+            var data = new GameModel
             {
-                creatorId = creatorId,
-                id = id,
-                game = new Game(),
+                creator = creator,
             };
             games.Add(data);
 
-            return id;
+            return data;
         }
-    }
-
-    public class GameData
-    {
-        public int creatorId;
-        public int id;
-        public Game game;
-        public List<PlayerData> players = new();
     }
 }

@@ -1,85 +1,171 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Grpc.Core;
-using Xdd.Model.Games.BlackJack.Users;
-using XddCards.Server.Games.BlackJack;
+using Xdd.Model.Games;
+using XddCards.Grpc.Games;
+using XddCards.Grpc.Games.BlackJack;
+using XddCards.Server.Model.Games.BlackJack;
 using XddCards.Server.Repositories.Games.BlackJack;
+using static XddCards.Grpc.Games.CardMessage.Types;
+using ModelRanks = Xdd.Model.Enums.Ranks;
+using ModelSuits = Xdd.Model.Enums.Suits;
 
 namespace XddCards.Server.Services.Games.BlackJack
 {
-    public class GameService : GameServiceGrpc.GameServiceGrpcBase
+    public class GameService : GameGrpc.GameGrpcBase
     {
-        public class PlayerData
+        public override async Task OnGameEnd(GameEndRequest request, IServerStreamWriter<GameEndReply> responseStream, ServerCallContext context)
         {
-            public PlayerReply data;
-            public IPlayer player;
+            var game = GetGame(context);
+
+            await game.OnGameEnd;
+
+            await responseStream.WriteAsync(new GameEndReply());
+        }
+
+        public override async Task OnDillerUpHiddenCard(OnDillerUpHiddenCardRequest request, IServerStreamWriter<OnDillerUpHiddenCardReply> responseStream, ServerCallContext context)
+        {
+            var game = GetGame(context);
+
+            var card = await game.OnDillerUpHiddenCard;
+
+            await responseStream.WriteAsync(new OnDillerUpHiddenCardReply { Card = card.Map() });
+        }
+
+        public override async Task OnCardAdd(OnCardAddRequest request, IServerStreamWriter<OnCardAddReply> responseStream, ServerCallContext context)
+        {
+            var game = GetGame(context);
+
+            while (game.IsGame)
+            {
+                var onCardAdd = await game.OnCardAdd;
+
+                var response = new OnCardAddReply
+                {
+                    Player = new Player { Id = onCardAdd.player.id },
+                    Card = onCardAdd.card.Map()
+                };
+
+                await responseStream.WriteAsync(response);
+            }
+        }
+
+        public async override Task OnResult(OnResultRequest request, IServerStreamWriter<OnResultReply> responseStream, ServerCallContext context)
+        {
+            var game = GetGame(context);
+
+            while (game.IsGame)
+            {
+                var onResult = await game.OnResult;
+
+                var scores = new ScoresReply();
+
+                foreach (var score in onResult.player.GetScores())
+                {
+                    scores.Scores.Add(score);
+                }
+
+                var response = new OnResultReply
+                {
+                    Player = new Player { Id = onResult.player.id },
+                    Status = new StatusReply { Status = onResult.player.GetStatus().Map() },
+                    Scores = scores,
+                    Result = onResult.result.Map(),
+                };
+
+                await responseStream.WriteAsync(response);
+            }
         }
 
         public override Task<IsGameReply> IsGame(IsGameRequest request, ServerCallContext context)
-            => Task.FromResult(new IsGameReply { Value = GetGame(request.Id).game.isGame });
-        public override Task<PlayerReply> Dealer(DealerRequest request, ServerCallContext context)
-            => Task.FromResult(new PlayerReply { Id = -1 });
+        {
+            var game = GetGame(context);
+
+            return Task.FromResult(new IsGameReply { Value = game.IsGame });
+        }
+
+        ///-------///
+        ///Players///
+        ///-------///
 
         public override Task<PlayersReply> Players(PlayersRequest request, ServerCallContext context)
         {
-            var game = GetGame(request.Id);
+            var game = GetGame(context);
 
-            var reply = new PlayersReply(); ;
-
-            game.players.ForEach(x => reply.Players.Add(x.data));
+            var reply = new PlayersReply();
+            foreach (var player in game.playerModels.Where(x => x != game.dealerModel))
+            {
+                reply.Players.Add(new Player { Id = player.id });
+            }
 
             return Task.FromResult(reply);
         }
 
+        public override Task<DealerReply> Dealer(DealerRequest request, ServerCallContext context)
+        {
+            var game = GetGame(context);
+
+            var player = new Player { Id = game.dealerModel.id };
+
+            return Task.FromResult(new DealerReply { Player = player });
+        }
+
         public override Task<InitReply> Init(InitRequest request, ServerCallContext context)
         {
-            var game = GetGame(request.Id);
+            var game = GetGame(context);
 
-            game.game.Init(request.PlayerCount);
-            game.players.Clear();
-
-            var playyer = game.game.players.ToArray();
-
-            for (int i = 0; i < playyer.Length; i++)
-            {
-                game.players.Add(new PlayerData { data = new PlayerReply { Id = i }, player = playyer[i] });
-            }
+            game.Init(request.PlayerCount);
 
             return Task.FromResult(new InitReply());
         }
 
         public override Task<StartReply> Start(StartRequest request, ServerCallContext context)
         {
-            var game = GetGame(request.Id);
+            var game = GetGame(context);
 
-            game.game.Start();
+            game.Start();
 
             return Task.FromResult(new StartReply());
         }
 
-        public override Task<HitReply> Hit(PlayerReply request, ServerCallContext context)
-        {
-            var game = GetGame(request.Id);
+        private GameModel GetGame(ServerCallContext context)
+            => GamesRepository.Get(context.GetUser());
+    }
 
-            var data = game.players.First(x => x.data.Id == x.data.Id);
 
-            game.game.Hit(data.player);
+    public static class Cards
+    {
+        public static CardMessage Map(this ICard card)
+            => new CardMessage { Rank = card.rank.Map(), Suit = card.suit.Map() };
 
-            return Task.FromResult(new HitReply());
-        }
+        public static Ranks Map(this ModelRanks rank) =>
+            rank switch
+            {
+                ModelRanks.Ace => Ranks.Ace,
+                ModelRanks.Two => Ranks.Two,
+                ModelRanks.Three => Ranks.Three,
+                ModelRanks.Four => Ranks.Four,
+                ModelRanks.Five => Ranks.Five,
+                ModelRanks.Six => Ranks.Six,
+                ModelRanks.Seven => Ranks.Seven,
+                ModelRanks.Eight => Ranks.Eight,
+                ModelRanks.Nine => Ranks.Nine,
+                ModelRanks.Ten => Ranks.Ten,
+                ModelRanks.Jack => Ranks.Jack,
+                ModelRanks.Queen => Ranks.Queen,
+                ModelRanks.King => Ranks.King,
+                _ => throw new ArgumentException(),
+            };
 
-        public override Task<StandReply> Stand(PlayerReply request, ServerCallContext context)
-        {
-            var game = GetGame(request.Id);
-
-            var data = game.players.First(x => x.data.Id == x.data.Id);
-
-            game.game.Hit(data.player);
-
-            return Task.FromResult(new StandReply());
-        }
-
-        private GameData GetGame(int id)
-            => GamesRepository.Get(id);
+        public static Suits Map(this ModelSuits suit)
+            => suit switch
+            {
+                ModelSuits.Clubs => Suits.Clubs,
+                ModelSuits.Diamonds => Suits.Diamonds,
+                ModelSuits.Hearts => Suits.Hearts,
+                ModelSuits.Spades => Suits.Spades,
+                _ => throw new ArgumentException(),
+            };
     }
 }

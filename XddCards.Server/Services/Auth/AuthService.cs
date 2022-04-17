@@ -6,7 +6,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Grpc.Core;
 using Microsoft.IdentityModel.Tokens;
-using XddCards.Server.Auth;
+using XddCards.Grpc.Auth;
 using XddCards.Server.Model;
 using XddCards.Server.Model.Auth;
 
@@ -14,19 +14,19 @@ namespace XddCards.Server.Services.Auth
 {
     public class AuthService : AuthGrpc.AuthGrpcBase
     {
-        private static List<User> people = new List<User>
+        public static List<User> Users = new List<User>
         {
             new User { Nickname = "Olimpik" },
         };
 
         public override Task<AuthReply> Auth(AuthRequest request, ServerCallContext context)
         {
-            if (people.Any(x => x.Nickname == request.Nickname))
+            if (Users.Any(x => x.Nickname == request.Nickname))
                 throw new Exception();
 
             var identity = GetIdentity(request.Nickname);
 
-            people.Add(new User { Nickname = request.Nickname, Identity = identity });
+            Users.Add(new User { Nickname = request.Nickname, Identity = identity });
 
             var now = DateTime.UtcNow;
 
@@ -53,8 +53,8 @@ namespace XddCards.Server.Services.Auth
             };
 
             var claimsIdentity = new ClaimsIdentity(
-                claims, "Token", 
-                ClaimsIdentity.DefaultNameClaimType, 
+                claims, "Token",
+                ClaimsIdentity.DefaultNameClaimType,
                 ClaimsIdentity.DefaultRoleClaimType);
 
             return claimsIdentity;

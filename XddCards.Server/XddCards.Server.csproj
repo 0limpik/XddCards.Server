@@ -5,23 +5,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Protobuf Include="Protos\greet.proto" GrpcServices="Server" />
-	  
-    <Protobuf Include="Protos\Games\Games.proto" GrpcServices="Server" />
-    <Protobuf Include="Protos\Games\BlackJack\Game.proto" GrpcServices="Server" />
-    <Protobuf Include="Protos\Games\BlackJack\Player.proto" GrpcServices="Server" />
-    <Protobuf Include="Protos\Users\User.proto" GrpcServices="Server" />
-    <Protobuf Include="Protos\Auth\Auth.proto" GrpcServices="Server" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Grpc.AspNetCore" Version="2.34.0" />
+    <PackageReference Include="Grpc.AspNetCore.Web" Version="2.44.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.16" />
+    <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel" Version="2.2.0" />
     <PackageReference Include="NUnit" Version="3.13.3" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\XddCards.Model\XddCards.Model.csproj" />
+    <ProjectReference Include="..\XddCards.Protos\XddCards.Protos\XddCards.Protos.csproj" />
   </ItemGroup>
 
 </Project>
