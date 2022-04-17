@@ -13,7 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\XddCards.Protos\XddCards.Protos\XddCards.Protos.csproj" />
+    <ProjectReference Include="..\XddCards.Model\XddCards.Model.csproj" />
+    <ProjectReference Include="..\XddCards.Protos\XddCards.Protos.csproj" />
   </ItemGroup>
 
 </Project>
