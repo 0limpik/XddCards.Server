@@ -1,6 +1,3 @@
 [submodule "XddCards.Protos"]
 	path = XddCards.Protos
 	url = https://github.com/0limpik/XddCards.Protos
-[submodule "XddCards.Model"]
-	path = XddCards.Model
-	url = https://github.com/0limpik/XddCards.Model
