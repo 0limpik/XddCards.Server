@@ -1,12 +1,10 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Grpc.Core;
 using XddCards.Grpc.Games.BlackJack;
+using XddCards.Server.Mappers.Cycles.BlackJack;
 using XddCards.Server.Model.Games.BlackJack;
 using XddCards.Server.Repositories.Games.BlackJack;
-using static XddCards.Grpc.Games.BlackJack.OnResultReply.Types;
-using static XddCards.Grpc.Games.BlackJack.StatusReply.Types;
 
 namespace XddCards.Server.Services.Games.BlackJack
 {
@@ -52,29 +50,6 @@ namespace XddCards.Server.Services.Games.BlackJack
             => GamesRepository.Get(context.GetUser());
 
         private PlayerModel GetPlayer(ServerCallContext context, int id)
-            => GetGame(context).playerModels.First(x => x.id == id);
-    }
-
-    public static class PlayerExtensions
-    {
-        public static GameResult Map(this Xdd.Model.Games.BlackJack.GameResult result) =>
-            result switch
-            {
-                Xdd.Model.Games.BlackJack.GameResult.Win => GameResult.Win,
-                Xdd.Model.Games.BlackJack.GameResult.Lose => GameResult.Lose,
-                Xdd.Model.Games.BlackJack.GameResult.Push => GameResult.Push,
-                _ => throw new ArgumentException(),
-            };
-
-        public static PlayerStatus Map(this Xdd.Model.Games.BlackJack.Users.PlayerStatus? status) =>
-            status switch
-            {
-                Xdd.Model.Games.BlackJack.Users.PlayerStatus.Win => PlayerStatus.Win,
-                Xdd.Model.Games.BlackJack.Users.PlayerStatus.Lose => PlayerStatus.Lose,
-                Xdd.Model.Games.BlackJack.Users.PlayerStatus.Push => PlayerStatus.Push,
-                Xdd.Model.Games.BlackJack.Users.PlayerStatus.Bust => PlayerStatus.Bust,
-                null => PlayerStatus.Empty,
-                _ => throw new ArgumentException(),
-            };
+            => GetGame(context).playerModels.First(x => x.Id == id);
     }
 }

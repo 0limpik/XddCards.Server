@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Grpc.Core;
 using Xdd.Model.Games;
 using XddCards.Grpc.Games;
 using XddCards.Grpc.Games.BlackJack;
+using XddCards.Server.Mappers.Cycles.BlackJack;
 using XddCards.Server.Model.Games.BlackJack;
 using XddCards.Server.Repositories.Games.BlackJack;
 using static XddCards.Grpc.Games.CardMessage.Types;
@@ -19,43 +21,52 @@ namespace XddCards.Server.Services.Games.BlackJack
         {
             var game = GetGame(context);
 
-            await game.OnGameEnd;
+            while (true)
+            {
+                await game.OnGameEnd;
 
-            await responseStream.WriteAsync(new GameEndReply());
+                Trace.WriteLine("OnGameEnd");
+                await responseStream.WriteAsync(new GameEndReply());
+            }
         }
 
         public override async Task OnDillerUpHiddenCard(OnDillerUpHiddenCardRequest request, IServerStreamWriter<OnDillerUpHiddenCardReply> responseStream, ServerCallContext context)
         {
             var game = GetGame(context);
 
-            var card = await game.OnDillerUpHiddenCard;
+            while (true)
+            {
+                var card = await game.OnDillerUpHiddenCard;
 
-            await responseStream.WriteAsync(new OnDillerUpHiddenCardReply { Card = card.Map() });
+                await responseStream.WriteAsync(new OnDillerUpHiddenCardReply { Card = card.Map() });
+            }
         }
 
         public override async Task OnCardAdd(OnCardAddRequest request, IServerStreamWriter<OnCardAddReply> responseStream, ServerCallContext context)
         {
             var game = GetGame(context);
 
-            while (game.IsGame)
+            do
             {
                 var onCardAdd = await game.OnCardAdd;
 
+                Trace.WriteLine(onCardAdd);
+
                 var response = new OnCardAddReply
                 {
-                    Player = new Player { Id = onCardAdd.player.id },
+                    Player = new Player { Id = onCardAdd.player.Id },
                     Card = onCardAdd.card.Map()
                 };
 
                 await responseStream.WriteAsync(response);
-            }
+            } while (true);
         }
 
         public async override Task OnResult(OnResultRequest request, IServerStreamWriter<OnResultReply> responseStream, ServerCallContext context)
         {
             var game = GetGame(context);
 
-            while (game.IsGame)
+            do
             {
                 var onResult = await game.OnResult;
 
@@ -68,14 +79,14 @@ namespace XddCards.Server.Services.Games.BlackJack
 
                 var response = new OnResultReply
                 {
-                    Player = new Player { Id = onResult.player.id },
+                    Player = new Player { Id = onResult.player.Id },
                     Status = new StatusReply { Status = onResult.player.GetStatus().Map() },
                     Scores = scores,
                     Result = onResult.result.Map(),
                 };
 
                 await responseStream.WriteAsync(response);
-            }
+            } while (true);
         }
 
         public override Task<IsGameReply> IsGame(IsGameRequest request, ServerCallContext context)
@@ -96,7 +107,7 @@ namespace XddCards.Server.Services.Games.BlackJack
             var reply = new PlayersReply();
             foreach (var player in game.playerModels.Where(x => x != game.dealerModel))
             {
-                reply.Players.Add(new Player { Id = player.id });
+                reply.Players.Add(new Player { Id = player.Id });
             }
 
             return Task.FromResult(reply);
@@ -106,7 +117,7 @@ namespace XddCards.Server.Services.Games.BlackJack
         {
             var game = GetGame(context);
 
-            var player = new Player { Id = game.dealerModel.id };
+            var player = new Player { Id = game.dealerModel.Id };
 
             return Task.FromResult(new DealerReply { Player = player });
         }
@@ -122,6 +133,7 @@ namespace XddCards.Server.Services.Games.BlackJack
 
         public override Task<StartReply> Start(StartRequest request, ServerCallContext context)
         {
+            Trace.WriteLine("Start GAME");
             var game = GetGame(context);
 
             game.Start();

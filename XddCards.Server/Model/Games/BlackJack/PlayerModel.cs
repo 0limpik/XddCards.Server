@@ -10,8 +10,8 @@ namespace XddCards.Server.Model.Games.BlackJack
     {
         public User owner;
 
-        public int id;
-        public IPlayer player { get; init; }
+        public int Id { get; private set; }
+        private IPlayer player { get; init; }
 
         public bool CanTurn => player.CanTurn;
         public IEnumerable<int> GetScores() => player.GetScores();
@@ -21,15 +21,16 @@ namespace XddCards.Server.Model.Games.BlackJack
         {
             add => player.OnCardAdd += value;
             remove => player.OnCardAdd -= value;
-        } 
+        }
         public event Action<GameResult> OnResult
         {
             add => player.OnResult += value;
             remove => player.OnResult -= value;
         }
 
-        public PlayerModel(IPlayer player)
+        public PlayerModel(int Id, IPlayer player)
         {
+            this.Id = Id;
             this.player = player;
         }
 
@@ -38,5 +39,8 @@ namespace XddCards.Server.Model.Games.BlackJack
 
         public void Stand()
             => player.Stand();
+
+        public override string ToString()
+            => $"{Id}";
     }
 }

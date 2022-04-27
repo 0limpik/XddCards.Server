@@ -1,8 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
+﻿using System.Collections.Generic;
 using Xdd.Model.Games;
 using Xdd.Model.Games.BlackJack;
+using XddCards.Server.Base;
 
 namespace XddCards.Server.Model.Games.BlackJack
 {
@@ -15,7 +14,7 @@ namespace XddCards.Server.Model.Games.BlackJack
 
         private Game game = new Game();
 
-        public CustomAwaiter OnGameEnd => new CustomAwaiter((x) => game.OnGameEnd += x);
+        public CustomAwaiter OnGameEnd = new CustomAwaiter();
         public CustomAwaiter<ICard> OnDillerUpHiddenCard = new CustomAwaiter<ICard>();
 
         public CustomAwaiter<(PlayerModel player, ICard card)> OnCardAdd = new CustomAwaiter<(PlayerModel player, ICard card)>();
@@ -25,6 +24,7 @@ namespace XddCards.Server.Model.Games.BlackJack
 
         public GameModel()
         {
+            game.OnGameEnd += OnGameEnd.Execute;
             game.OnDillerUpHiddenCard += OnDillerUpHiddenCard.Execute;
         }
 
@@ -34,14 +34,18 @@ namespace XddCards.Server.Model.Games.BlackJack
 
             playerModels.Clear();
 
-            dealerModel = new PlayerModel(game.dealer) { id = -1 };
-
-            playerModels.Add(dealerModel);
+            dealerModel = new PlayerModel(-1, game.dealer);
+            Add(dealerModel);
 
             int ids = 0;
             foreach (var player in game.players)
             {
-                var playerModel = new PlayerModel(player) { id = ++ids, owner = creator };
+                var playerModel = new PlayerModel(++ids, player) { owner = creator };
+                Add(playerModel);
+            }
+
+            void Add(PlayerModel playerModel)
+            {
                 playerModel.OnCardAdd += (card) => OnCardAdd.Execute((playerModel, card));
                 playerModel.OnResult += (result) => OnResult.Execute((playerModel, result));
                 playerModels.Add(playerModel);
@@ -55,55 +59,12 @@ namespace XddCards.Server.Model.Games.BlackJack
 
         public void Hit(PlayerModel model)
         {
-            model.player.Hit();
+            model.Hit();
         }
 
         public void Stand(PlayerModel model)
         {
-            model.player.Stand();
+            model.Stand();
         }
-    }
-
-    public class CustomAwaiter<T> : INotifyCompletion
-    {
-        private Action continuation;
-        private T value;
-
-        public void Execute(T value)
-        {
-            this.value = value;
-            continuation();
-        }
-
-        public bool IsCompleted => false;
-
-        public T GetResult() => value;
-
-        public void OnCompleted(Action continuation) { }
-
-        public CustomAwaiter<T> GetAwaiter()
-            => this;
-    }
-
-    public class CustomAwaiter : INotifyCompletion
-    {
-        private Action<Action> OnCompletedEvent;
-
-        public CustomAwaiter(Action<Action> OnCompletedEvent)
-        {
-            this.OnCompletedEvent = OnCompletedEvent ?? throw new ArgumentException();
-        }
-
-        public bool IsCompleted => false;
-
-        public void GetResult() { }
-
-        public void OnCompleted(Action continuation)
-        {
-            OnCompletedEvent(continuation);
-        }
-
-        public CustomAwaiter GetAwaiter()
-            => this;
     }
 }
